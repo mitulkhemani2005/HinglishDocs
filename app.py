@@ -23,27 +23,30 @@ def cleanup_uploaded_pdfs():
                 pass
 
 
-@app.route("/convert", methods=["POST"])
+@app.route('/convert', methods=['POST'])
 def convert():
-    cleanup_uploaded_pdfs()
-
-    if "file" not in request.files:
-        return {"error": "No file uploaded"}, 400
-
-    file = request.files["file"]
-
-    if not file.filename.lower().endswith(".pdf"):
-        return {"error": "Only PDF files are allowed"}, 400
-
-    input_path = os.path.join(UPLOAD_DIR, file.filename)
-    output_path = os.path.join(UPLOAD_DIR, "output.pdf")
-
     try:
-        file.save(input_path)
-        process_pdf(input_path, output_path)
-        return send_file(output_path, as_attachment=True)
-    finally:
         cleanup_uploaded_pdfs()
+
+        if "file" not in request.files:
+            return {"error": "No file uploaded"}, 400
+
+        file = request.files["file"]
+        input_path = os.path.join(UPLOAD_DIR, file.filename)
+        file.save(input_path)
+
+        output_path = os.path.join(UPLOAD_DIR, "output.pdf")
+        process_pdf(input_path, output_path)
+
+        return send_file(output_path, as_attachment=True)
+
+    except Exception as e:
+        # TEMPORARY DEBUG
+        return {
+            "error": "Internal error",
+            "details": str(e)
+        }, 500
+
 
 
 @app.route("/", methods=["GET"])
