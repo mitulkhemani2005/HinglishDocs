@@ -1,20 +1,9 @@
 import requests
 import unicodedata
 
-# More stable public instance
 LIBRE_TRANSLATE_URL = "https://libretranslate.de/translate"
 
-HEADERS = {
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-}
-
 def translate_en_to_hi(text: str) -> str:
-    """
-    Translates English → Hindi.
-    NEVER crashes PDF generation.
-    """
-
     if not text or not text.strip():
         return text
 
@@ -25,24 +14,21 @@ def translate_en_to_hi(text: str) -> str:
         "format": "text"
     }
 
-    try:
-        response = requests.post(
-            LIBRE_TRANSLATE_URL,
-            json=payload,          # IMPORTANT: json= not data=
-            headers=HEADERS,
-            timeout=8
-        )
+    response = requests.post(
+        LIBRE_TRANSLATE_URL,
+        json=payload,
+        timeout=8
+    )
 
-        response.raise_for_status()
+    print("STATUS:", response.status_code)
+    print("RAW RESPONSE:", response.text)
 
-        result = response.json()
-        hindi = result.get("translatedText", text)
+    response.raise_for_status()
 
-        # Normalize Unicode for proper Hindi rendering
-        return unicodedata.normalize("NFC", hindi)
+    data = response.json()
+    translated = data.get("translatedText", "")
 
-    except Exception:
-        # HARD FAIL-SAFE
-        # If translation fails, return original text
-        # so PDF generation NEVER breaks
-        return text
+    if not translated or translated.strip().lower() == text.strip().lower():
+        raise ValueError("Translation not applied")
+
+    return unicodedata.normalize("NFC", translated)
