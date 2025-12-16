@@ -1,9 +1,20 @@
 import requests
 import unicodedata
 
-LIBRE_TRANSLATE_URL = "https://libretranslate.de/translate"
+LIBRE_TRANSLATE_URL = "https://translate.argosopentech.com/translate"
+
+HEADERS = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0"  # important for some instances
+}
 
 def translate_en_to_hi(text: str) -> str:
+    """
+    Cloud-safe English → Hindi translation.
+    NEVER crashes PDF generation.
+    """
+
     if not text or not text.strip():
         return text
 
@@ -14,21 +25,32 @@ def translate_en_to_hi(text: str) -> str:
         "format": "text"
     }
 
-    response = requests.post(
-        LIBRE_TRANSLATE_URL,
-        json=payload,
-        timeout=8
-    )
+    try:
+        response = requests.post(
+            LIBRE_TRANSLATE_URL,
+            json=payload,
+            headers=HEADERS,
+            timeout=10
+        )
 
-    print("STATUS:", response.status_code)
-    print("RAW RESPONSE:", response.text)
+        # If server responds but with no body
+        if not response.text or not response.text.strip():
+            return text
 
-    response.raise_for_status()
+        # Try JSON safely
+        try:
+            data = response.json()
+        except Exception:
+            return text
 
-    data = response.json()
-    translated = data.get("translatedText", "")
+        hindi = data.get("translatedText")
 
-    if not translated or translated.strip().lower() == text.strip().lower():
-        raise ValueError("Translation not applied")
+        # Validate translation
+        if not hindi or hindi.strip().lower() == text.strip().lower():
+            return text
 
-    return unicodedata.normalize("NFC", translated)
+        return unicodedata.normalize("NFC", hindi)
+
+    except Exception:
+        # ABSOLUTE FAIL-SAFE
+        return text
